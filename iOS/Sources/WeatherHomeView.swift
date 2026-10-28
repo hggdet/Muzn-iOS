@@ -565,7 +565,7 @@ struct WeatherHomeView: View {
         guard let index = model.snapshot.airQualityIndex else {
             return model.isArabic ? "غير متاح" : "Unavailable"
         }
-        switch index {
+        return switch index {
         case ...50: model.isArabic ? "جيد" : "Good"
         case ...100: model.isArabic ? "معتدل" : "Moderate"
         case ...150: model.isArabic ? "حساس" : "Sensitive"
