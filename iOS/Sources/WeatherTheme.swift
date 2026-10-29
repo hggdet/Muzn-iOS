@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum WeatherPalette {
     static let ink = Color(red: 0.055, green: 0.082, blue: 0.153)
@@ -13,41 +14,27 @@ enum WeatherPalette {
     static let hairline = Color.white.opacity(0.13)
 }
 
-enum WeatherFormat {
-    static func temperature(_ celsius: Double, fahrenheit: Bool, arabic: Bool) -> String {
-        let value = fahrenheit ? Int((celsius * 9 / 5 + 32).rounded()) : Int(celsius.rounded())
-        let magnitude = localizedNumber(abs(value), arabic: arabic)
-        let sign = value < 0 ? "−" : ""
-        return "\(sign)\(magnitude)°"
-    }
-
-    static func localizedNumber(_ value: Int, arabic: Bool) -> String {
-        let formatter = NumberFormatter()
-        formatter.locale = Locale(identifier: arabic ? "ar" : "en_US")
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: value)) ?? String(value)
-    }
-
-    static func hour(_ date: Date, arabic: Bool, timeZoneIdentifier: String? = nil) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: arabic ? "ar" : "en_US")
-        if let timeZoneIdentifier, let timeZone = TimeZone(identifier: timeZoneIdentifier) {
-            formatter.timeZone = timeZone
+enum WeatherTypography {
+    static func font(_ size: CGFloat, weight: Font.Weight = .regular, arabic: Bool) -> Font {
+        let selectedArabicFont = UserDefaults.standard.string(forKey: "muzn.settings.arabicFontName") ?? "system"
+        if arabic, selectedArabicFont != "system" {
+            return .custom(selectedArabicFont, size: size, relativeTo: .body).weight(weight)
         }
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        let scaledSize = UIFontMetrics(forTextStyle: .body).scaledValue(for: size)
+        return .system(size: scaledSize, weight: weight, design: .rounded)
     }
 
-    static func weekday(_ date: Date, arabic: Bool, timeZoneIdentifier: String? = nil) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: arabic ? "ar" : "en_US")
-        if let timeZoneIdentifier, let timeZone = TimeZone(identifier: timeZoneIdentifier) {
-            formatter.timeZone = timeZone
+    static func font(_ size: CGFloat, weight: Font.Weight = .regular, text: String) -> Font {
+        let containsArabic = text.unicodeScalars.contains { scalar in
+            let value = Int(scalar.value)
+            return (0x0600...0x06FF).contains(value)
+                || (0x0750...0x077F).contains(value)
+                || (0x0870...0x089F).contains(value)
+                || (0x08A0...0x08FF).contains(value)
+                || (0xFB50...0xFDFF).contains(value)
+                || (0xFE70...0xFEFF).contains(value)
         }
-        formatter.dateFormat = "EEE"
-        return formatter.string(from: date)
+        return font(size, weight: weight, arabic: containsArabic)
     }
 }
 
@@ -101,16 +88,6 @@ struct WeatherBackdrop: View {
                         .frame(width: geometry.size.width * 1.2, height: geometry.size.height * 0.22)
                         .blur(radius: 48)
                         .offset(x: CGFloat(sin(time * 0.10)) * 24, y: geometry.size.height * 0.04)
-
-                    Circle()
-                        .stroke(.white.opacity(0.075), lineWidth: 1)
-                        .frame(width: geometry.size.width * 1.25, height: geometry.size.width * 1.25)
-                        .offset(x: geometry.size.width * 0.47, y: geometry.size.height * 0.06)
-
-                    Circle()
-                        .stroke(.white.opacity(0.045), lineWidth: 1)
-                        .frame(width: geometry.size.width * 0.96, height: geometry.size.width * 0.96)
-                        .offset(x: geometry.size.width * 0.47, y: geometry.size.height * 0.06)
 
                     Canvas { context, size in
                         let width = Double(size.width)
@@ -184,19 +161,9 @@ struct WeatherStageOrb: View {
                     startRadius: 5,
                     endRadius: 68
                 ))
-            Circle().stroke(.white.opacity(0.26), lineWidth: 1)
-            Circle()
-                .trim(from: 0.08, to: 0.88)
-                .stroke(
-                    AngularGradient(colors: [.white.opacity(0.75), glow.opacity(0.7), .clear], center: .center),
-                    style: StrokeStyle(lineWidth: 1.7, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-76))
-                .padding(4)
-            Circle().stroke(.white.opacity(0.10), lineWidth: 1).padding(13)
-            Image(systemName: condition.symbolName)
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(WeatherPalette.ice, WeatherPalette.amber)
+            Image(systemName: condition.outlineSymbolName)
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(WeatherPalette.ice)
                 .font(.system(size: 39, weight: .light))
                 .symbolEffect(.pulse, options: .repeating)
         }
@@ -261,21 +228,25 @@ struct SectionHeading: View {
     let title: String
     var trailing: String? = nil
 
+    private var isArabic: Bool {
+        (eyebrow + title).unicodeScalars.contains { (0x0600...0x06FF).contains(Int($0.value)) }
+    }
+
     var body: some View {
         HStack(alignment: .bottom, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(eyebrow.uppercased())
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .tracking(1.5)
+                    .font(WeatherTypography.font(10, weight: .bold, arabic: isArabic))
+                    .tracking(isArabic ? 0 : 1.5)
                     .foregroundStyle(WeatherPalette.muted.opacity(0.85))
                 Text(title)
-                    .font(.system(size: 19, weight: .semibold, design: .rounded))
+                    .font(WeatherTypography.font(19, weight: .semibold, arabic: isArabic))
                     .foregroundStyle(.white)
             }
             Spacer(minLength: 0)
             if let trailing {
                 Text(trailing)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(WeatherTypography.font(12, weight: .semibold, arabic: isArabic))
                     .foregroundStyle(WeatherPalette.ice)
             }
         }
@@ -310,7 +281,7 @@ struct WeatherSourceNote: View {
                     .foregroundStyle(WeatherPalette.amber)
             }
         }
-        .font(.system(size: 10, weight: .regular, design: .rounded))
+            .font(WeatherTypography.font(10, weight: .regular, text: model.isArabic ? "مصدر بيانات الطقس" : "Weather data"))
     }
 }
 
@@ -327,30 +298,32 @@ struct WeatherConnectionStateView: View {
                         .foregroundStyle(model.isRefreshing ? WeatherPalette.ice : WeatherPalette.amber)
 
                     Text(model.snapshot.location.name)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .font(WeatherTypography.font(17, weight: .semibold, text: model.snapshot.location.name))
                         .foregroundStyle(.white)
 
                     if model.isRefreshing {
                         ProgressView()
                             .tint(WeatherPalette.ice)
                         Text(model.isArabic ? "جارٍ جلب الطقس من الإنترنت…" : "Fetching weather from the internet…")
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .font(WeatherTypography.font(12, weight: .medium, text: model.isArabic ? "جارٍ جلب الطقس من الإنترنت…" : "Fetching weather from the internet…"))
                             .foregroundStyle(WeatherPalette.muted)
                     } else {
                         Text(model.isArabic
                              ? "تعذّر جلب الطقس الآن. تحقق من الاتصال ثم أعد المحاولة."
                              : "Live weather couldn't be loaded. Check your connection and try again.")
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .font(WeatherTypography.font(12, weight: .medium, text: model.isArabic
+                                ? "تعذّر جلب الطقس الآن. تحقق من الاتصال ثم أعد المحاولة."
+                                : "Live weather couldn't be loaded. Check your connection and try again."))
                             .foregroundStyle(WeatherPalette.muted)
                             .multilineTextAlignment(.center)
 
                         Button { model.refresh() } label: {
                             Label(model.isArabic ? "إعادة المحاولة" : "Try again", systemImage: "arrow.clockwise")
-                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .font(WeatherTypography.font(12, weight: .semibold, text: model.isArabic ? "إعادة المحاولة" : "Try again"))
                                 .foregroundStyle(WeatherPalette.ink)
                                 .padding(.horizontal, 15)
                                 .padding(.vertical, 10)
-                                .background(WeatherPalette.ice, in: Capsule())
+                                .weatherGlass(in: Capsule(), interactive: true, tint: WeatherPalette.ice)
                         }
                         .buttonStyle(.plain)
                     }

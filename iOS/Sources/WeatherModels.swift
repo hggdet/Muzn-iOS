@@ -24,7 +24,7 @@ struct WeatherLocation: Identifiable, Equatable, Codable, Sendable {
     )
 }
 
-enum WeatherCondition: String, CaseIterable, Identifiable, Sendable {
+enum WeatherCondition: String, CaseIterable, Identifiable, Codable, Sendable {
     case clear
     case partlyCloudy
     case cloudy
@@ -44,6 +44,18 @@ enum WeatherCondition: String, CaseIterable, Identifiable, Sendable {
         case .snow: "cloud.snow.fill"
         case .thunderstorm: "cloud.bolt.rain.fill"
         case .fog: "cloud.fog.fill"
+        }
+    }
+
+    var outlineSymbolName: String {
+        switch self {
+        case .clear: "sun.max"
+        case .partlyCloudy: "cloud.sun"
+        case .cloudy: "cloud"
+        case .rain: "cloud.rain"
+        case .snow: "cloud.snow"
+        case .thunderstorm: "cloud.bolt.rain"
+        case .fog: "cloud.fog"
         }
     }
 
@@ -71,6 +83,10 @@ enum WeatherCondition: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    func localizedLabel(arabic: Bool) -> String {
+        arabic ? labelArabic : labelEnglish
+    }
+
     static func from(wmoCode: Int) -> WeatherCondition {
         switch wmoCode {
         case 0: .clear
@@ -82,6 +98,44 @@ enum WeatherCondition: String, CaseIterable, Identifiable, Sendable {
         case 95...99: .thunderstorm
         default: .cloudy
         }
+    }
+}
+
+enum WeatherFormat {
+    static func temperature(_ celsius: Double, fahrenheit: Bool, arabic: Bool) -> String {
+        let value = fahrenheit ? Int((celsius * 9 / 5 + 32).rounded()) : Int(celsius.rounded())
+        let magnitude = localizedNumber(abs(value), arabic: arabic)
+        let sign = value < 0 ? "−" : ""
+        return "\(sign)\(magnitude)°"
+    }
+
+    static func localizedNumber(_ value: Int, arabic: Bool) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: arabic ? "ar" : "en_US")
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? String(value)
+    }
+
+    static func hour(_ date: Date, arabic: Bool, timeZoneIdentifier: String? = nil) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: arabic ? "ar" : "en_US")
+        if let timeZoneIdentifier, let timeZone = TimeZone(identifier: timeZoneIdentifier) {
+            formatter.timeZone = timeZone
+        }
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+
+    static func weekday(_ date: Date, arabic: Bool, timeZoneIdentifier: String? = nil) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: arabic ? "ar" : "en_US")
+        if let timeZoneIdentifier, let timeZone = TimeZone(identifier: timeZoneIdentifier) {
+            formatter.timeZone = timeZone
+        }
+        formatter.dateFormat = "EEE"
+        return formatter.string(from: date)
     }
 }
 
@@ -97,6 +151,7 @@ struct HourlyForecast: Identifiable, Equatable, Sendable {
     let id: String
     let time: Date
     let temperatureC: Double
+    let windKPH: Double
     let condition: WeatherCondition
     let precipitationProbability: Int
 }

@@ -15,7 +15,7 @@ struct OpenMeteoWeatherProvider: WeatherDataProvider {
             URLQueryItem(name: "latitude", value: String(location.latitude)),
             URLQueryItem(name: "longitude", value: String(location.longitude)),
             URLQueryItem(name: "current", value: "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,uv_index"),
-            URLQueryItem(name: "hourly", value: "temperature_2m,precipitation_probability,weather_code"),
+            URLQueryItem(name: "hourly", value: "temperature_2m,precipitation_probability,weather_code,wind_speed_10m"),
             URLQueryItem(name: "daily", value: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"),
             URLQueryItem(name: "timezone", value: "auto"),
             URLQueryItem(name: "forecast_days", value: "7"),
@@ -88,18 +88,20 @@ private struct ForecastResponse: Decodable {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         let firstDisplayedHour = calendar.dateInterval(of: .hour, for: observedAt)?.start ?? observedAt
-        let hourlyCount = [hourly.time.count, hourly.temperature.count, hourly.precipitationProbability.count, hourly.weatherCode.count].min() ?? 0
+        let hourlyCount = [hourly.time.count, hourly.temperature.count, hourly.precipitationProbability.count, hourly.weatherCode.count, hourly.windSpeed.count].min() ?? 0
         var hourlyForecast: [HourlyForecast] = []
         for index in 0..<hourlyCount {
             guard let time = dateFormatter.date(from: hourly.time[index]),
                   time >= firstDisplayedHour,
                   let temperature = hourly.temperature[index],
                   let precipitationChance = hourly.precipitationProbability[index],
-                  let weatherCode = hourly.weatherCode[index] else { continue }
+                  let weatherCode = hourly.weatherCode[index],
+                  let windSpeed = hourly.windSpeed[index] else { continue }
             hourlyForecast.append(HourlyForecast(
                 id: hourly.time[index],
                 time: time,
                 temperatureC: temperature,
+                windKPH: windSpeed,
                 condition: WeatherCondition.from(wmoCode: weatherCode),
                 precipitationProbability: precipitationChance
             ))
@@ -178,12 +180,14 @@ private struct HourlyBlock: Decodable {
     let temperature: [Double?]
     let precipitationProbability: [Int?]
     let weatherCode: [Int?]
+    let windSpeed: [Double?]
 
     enum CodingKeys: String, CodingKey {
         case time
         case temperature = "temperature_2m"
         case precipitationProbability = "precipitation_probability"
         case weatherCode = "weather_code"
+        case windSpeed = "wind_speed_10m"
     }
 }
 

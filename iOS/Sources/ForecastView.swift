@@ -27,27 +27,10 @@ struct ForecastView: View {
                                         Text(model.isArabic ? "العظمى · الصغرى" : "High · Low")
                                             .foregroundStyle(WeatherPalette.muted)
                                     }
-                                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                                    .font(WeatherTypography.font(10, weight: .medium, text: model.isArabic ? "احتمال المطر · العظمى · الصغرى" : "Rain chance · High · Low"))
                                     VStack(spacing: 0) {
                                         ForEach(Array(model.snapshot.daily.enumerated()), id: \.element.id) { item in
                                             dailyRow(index: item.offset, day: item.element)
-                                            if item.offset < model.snapshot.daily.count - 1 {
-                                                Divider().overlay(.white.opacity(0.08)).padding(.leading, 42)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            GlassCard {
-                                VStack(alignment: .leading, spacing: 13) {
-                                    SectionHeading(
-                                        eyebrow: model.isArabic ? "الساعات القادمة" : "HOUR BY HOUR",
-                                        title: model.isArabic ? "على مدار اليوم" : "The next 24 hours"
-                                    )
-                                    ForEach(Array(model.snapshot.hourly.enumerated()), id: \.element.id) { item in
-                                        hourlyRow(hour: item.element, index: item.offset)
-                                        if item.offset < model.snapshot.hourly.count - 1 {
-                                            Divider().overlay(.white.opacity(0.07)).padding(.leading, 39)
                                         }
                                     }
                                 }
@@ -69,27 +52,27 @@ struct ForecastView: View {
     private var summaryCard: some View {
         GlassCard {
             HStack(spacing: 12) {
-                Image(systemName: model.snapshot.current.condition.symbolName)
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(WeatherPalette.ice, WeatherPalette.amber)
+                Image(systemName: model.snapshot.current.condition.outlineSymbolName)
+                    .symbolRenderingMode(.monochrome)
+                    .foregroundStyle(WeatherPalette.ice)
                     .font(.system(size: 27))
                     .frame(width: 43, height: 43)
-                    .background(WeatherPalette.ice.opacity(0.10), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-                VStack(alignment: .leading, spacing: 4) {
+                    .weatherGlass(in: RoundedRectangle(cornerRadius: 15, style: .continuous), tint: WeatherPalette.ice.opacity(0.10))
+                    VStack(alignment: .leading, spacing: 4) {
                     Text(model.snapshot.location.name)
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .font(WeatherTypography.font(14, weight: .semibold, text: model.snapshot.location.name))
                         .foregroundStyle(.white)
                     Text(model.isArabic ? "توقعات حية · Open-Meteo" : "Live forecast · Open-Meteo")
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .font(WeatherTypography.font(10, weight: .medium, text: model.isArabic ? "توقعات حية · Open-Meteo" : "Live forecast · Open-Meteo"))
                         .foregroundStyle(WeatherPalette.muted)
                 }
                 Spacer(minLength: 3)
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(WeatherFormat.temperature(model.snapshot.current.temperatureC, fahrenheit: model.usesFahrenheit, arabic: model.isArabic))
-                        .font(.system(size: 20, weight: .semibold, design: .rounded))
+                        .font(WeatherTypography.font(20, weight: .semibold, text: WeatherFormat.temperature(model.snapshot.current.temperatureC, fahrenheit: model.usesFahrenheit, arabic: model.isArabic)))
                         .foregroundStyle(.white)
                     Text(model.snapshot.current.condition.localizedLabel(arabic: model.isArabic))
-                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .font(WeatherTypography.font(9, weight: .medium, text: model.snapshot.current.condition.localizedLabel(arabic: model.isArabic)))
                         .foregroundStyle(WeatherPalette.muted)
                 }
             }
@@ -99,65 +82,57 @@ struct ForecastView: View {
     private func dailyRow(index: Int, day: DailyForecast) -> some View {
         HStack(spacing: 10) {
             Text(dayLabel(index: index, date: day.date))
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .font(WeatherTypography.font(11, weight: .semibold, arabic: model.isArabic))
                 .foregroundStyle(.white)
-                .frame(width: 76, alignment: .leading)
-            Image(systemName: day.condition.symbolName)
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(WeatherPalette.ice, WeatherPalette.amber)
+                .frame(width: 63, alignment: .leading)
+            Image(systemName: day.condition.outlineSymbolName)
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(WeatherPalette.ice)
                 .font(.system(size: 18))
-                .frame(width: 27)
+                .frame(width: 24)
             HStack(spacing: 3) {
                 Image(systemName: "drop.fill")
                     .font(.system(size: 8, weight: .bold))
                 Text("\(WeatherFormat.localizedNumber(day.precipitationProbability, arabic: model.isArabic))%")
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(WeatherTypography.font(9, weight: .semibold, text: "\(WeatherFormat.localizedNumber(day.precipitationProbability, arabic: model.isArabic))%"))
             }
             .foregroundStyle(WeatherPalette.ice)
-            .padding(.horizontal, 7)
+            .padding(.horizontal, 6)
             .padding(.vertical, 5)
-            .background(WeatherPalette.softBlue.opacity(0.12), in: Capsule())
-            Spacer(minLength: 2)
+            .weatherGlass(in: Capsule(), tint: WeatherPalette.softBlue.opacity(0.12))
+            Spacer(minLength: 0)
             Text(WeatherFormat.temperature(day.highC, fahrenheit: model.usesFahrenheit, arabic: model.isArabic))
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .font(WeatherTypography.font(12, weight: .semibold, arabic: model.isArabic))
                 .foregroundStyle(.white)
+            temperatureRangeBar(for: day)
+                .frame(width: 39, height: 5)
             Text(WeatherFormat.temperature(day.lowC, fahrenheit: model.usesFahrenheit, arabic: model.isArabic))
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(WeatherTypography.font(10, weight: .medium, arabic: model.isArabic))
                 .foregroundStyle(WeatherPalette.muted)
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 11)
         .accessibilityElement(children: .combine)
     }
 
-    private func hourlyRow(hour: HourlyForecast, index: Int) -> some View {
-        HStack(spacing: 10) {
-            Text(index == 0 ? (model.isArabic ? "الآن" : "Now") : WeatherFormat.hour(hour.time, arabic: model.isArabic, timeZoneIdentifier: model.snapshot.timezoneIdentifier))
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
-                .frame(width: 61, alignment: .leading)
-            Image(systemName: hour.condition.symbolName)
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(WeatherPalette.ice, WeatherPalette.amber)
-                .font(.system(size: 17))
-                .frame(width: 25)
-            Text("\(WeatherFormat.localizedNumber(hour.precipitationProbability, arabic: model.isArabic))%")
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .foregroundStyle(WeatherPalette.ice)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
-                .background(WeatherPalette.softBlue.opacity(0.12), in: Capsule())
-            Spacer(minLength: 2)
-            Text(hour.condition.localizedLabel(arabic: model.isArabic))
-                .font(.system(size: 10, weight: .regular, design: .rounded))
-                .foregroundStyle(WeatherPalette.muted)
-                .lineLimit(1)
-            Text(WeatherFormat.temperature(hour.temperatureC, fahrenheit: model.usesFahrenheit, arabic: model.isArabic))
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
-                .frame(width: 42, alignment: .trailing)
+    private func temperatureRangeBar(for day: DailyForecast) -> some View {
+        let lows = model.snapshot.daily.map(\.lowC)
+        let highs = model.snapshot.daily.map(\.highC)
+        let minimum = lows.min() ?? day.lowC
+        let maximum = highs.max() ?? day.highC
+        let span = max(maximum - minimum, 1)
+        let start = CGFloat((day.lowC - minimum) / span)
+        let length = CGFloat((day.highC - day.lowC) / span)
+
+        return GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Capsule().fill(.white.opacity(0.10))
+                Capsule()
+                    .fill(LinearGradient(colors: [WeatherPalette.ice, WeatherPalette.amber], startPoint: .leading, endPoint: .trailing))
+                    .frame(width: max(5, geometry.size.width * length))
+                    .offset(x: geometry.size.width * start)
+            }
         }
-        .padding(.vertical, 6)
-        .accessibilityElement(children: .combine)
+        .accessibilityHidden(true)
     }
 
     private func dayLabel(index: Int, date: Date) -> String {
