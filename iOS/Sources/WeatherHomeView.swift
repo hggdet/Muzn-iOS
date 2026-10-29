@@ -538,9 +538,9 @@ private struct HourlyTrendChart: View {
                 return maximum + max((maximum - (values.min() ?? maximum)) * 0.15, 1)
             }()
             let valueRange = max(maximumValue - minimumValue, 1)
-            let points = values.enumerated().map { index, value in
+            let points: [CGPoint] = values.enumerated().map { index, value in
                 let progress = CGFloat(index) / CGFloat(max(values.count - 1, 1))
-                CGPoint(
+                return CGPoint(
                     x: geometry.size.width * (arabic ? 1 - progress : progress),
                     y: chartHeight - CGFloat((value - minimumValue) / valueRange) * chartHeight
                 )
@@ -665,13 +665,13 @@ private struct LocationPickerSheet: View {
                         }
                         .disabled(isSearching || cityQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
-                    .listRowBackground(.clear)
+                    .listRowBackground(Color.clear)
 
                     if let searchError {
                         Text(searchError)
                             .font(WeatherTypography.font(12, weight: .regular, text: searchError))
                             .foregroundStyle(WeatherPalette.amber)
-                            .listRowBackground(.clear)
+                            .listRowBackground(Color.clear)
                     }
 
                     ForEach(searchResults) { location in
@@ -694,7 +694,7 @@ private struct LocationPickerSheet: View {
                             }
                             .padding(.vertical, 4)
                         }
-                        .listRowBackground(.clear)
+                        .listRowBackground(Color.clear)
                     }
                 }
             }
@@ -758,7 +758,7 @@ private struct LocationPickerSheet: View {
                 .accessibilityLabel(model.isArabic ? "حذف \(location.name)" : "Remove \(location.name)")
             }
         }
-        .listRowBackground(.clear)
+        .listRowBackground(Color.clear)
     }
 
     @MainActor
